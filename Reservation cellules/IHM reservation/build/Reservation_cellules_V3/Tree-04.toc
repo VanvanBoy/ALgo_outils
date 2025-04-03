@@ -1,0 +1,6 @@
+('C:\\Users\\User\\Desktop\\Projets_code\\Reservation cellules\\IHM '
+ 'reservation\\build\\Reservation_cellules_V3\\tkcalendar-1.6.1-py3.11.egg',
+ None,
+ {'EGG-INFO', '*.pyc', '*.py', '*.pyd', '*.pyw', '*.cp311-win_amd64.pyd'},
+ 'DATA',
+ [])
