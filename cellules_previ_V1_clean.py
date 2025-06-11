@@ -22,11 +22,11 @@ def extraire_batteries_a_traiter(connection):
                 "nl.fournisseur, "
                 "bb.reference_cellule "
             "FROM "
-                "batteries_recep as batt "
+                "batterie as batt "
             "JOIN "
-                "numero_lot as nl ON batt.num_lot = nl.lot "
+                "ref_lot as nl ON batt.num_lot = nl.num_lot "
             "JOIN "
-                "bibliotheque_batteries as bb ON batt.reference_batterie_voltr = bb.reference_voltr "
+                "ref_batterie as bb ON batt.reference_batterie_voltr = bb.reference_batterie_voltr "
             "WHERE batt.etape_processus = %s "
             "AND previsionnel_calcule is null "
             "AND exutoire is null"
@@ -78,7 +78,7 @@ def determiner_tot_rebus_batterie(fournisseur,num_lot,ref_value_voltr,cursor):
 
         (SUM(CASE WHEN etape_processus = 'a demanteler' AND exutoire IS NULL THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS pourcentage_non_traitees
     FROM 
-        batteries_recep
+        batterie
     WHERE 
         num_lot = %s
     '''
@@ -90,14 +90,14 @@ def determiner_tot_rebus_batterie(fournisseur,num_lot,ref_value_voltr,cursor):
     taux_non_traite = float(cursor.fetchone()[0])
     
     if taux_non_traite < 80 :
-        cursor.execute('SELECT num_lot, COUNT(*) AS total_batteries, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM batteries_recep WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot))
+        cursor.execute('SELECT num_lot, COUNT(*) AS total_batteries, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM batterie WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot))
         rebus_lot=cursor.fetchall()[0]
         df = pd.DataFrame([rebus_lot], columns=['numero_lot', 'total_batterie', 'total recyclé','taux_rebus'])
         taux_rebus_lot=df['taux_rebus']
         return float(taux_rebus_lot[0])
         
     else:
-        cursor.execute('select lot, etat from numero_lot where fournisseur =%s',(fournisseur,))
+        cursor.execute('select num_lot, etat_reception from ref_lot where fournisseur =%s',(fournisseur,))
         
         carac_lot=cursor.fetchall()
         df_lots=pd.DataFrame(carac_lot)
@@ -116,7 +116,7 @@ def determiner_tot_rebus_batterie(fournisseur,num_lot,ref_value_voltr,cursor):
         
             for i in index_clos:
                 num_lot=numeros_lots[i]
-                cursor.execute('SELECT num_lot, COUNT(*) AS total_batteries, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM batteries_recep WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot))
+                cursor.execute('SELECT num_lot, COUNT(*) AS total_batteries, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM batterie WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot))
                 rebus_lot_b=cursor.fetchall()
                 if rebus_lot_b:
                     rebus_lot=rebus_lot_b[0]
@@ -131,7 +131,7 @@ def determiner_tot_rebus_batterie(fournisseur,num_lot,ref_value_voltr,cursor):
         else :
              query = """
                  SELECT numero_serie_batterie 
-                 FROM batteries_recep 
+                 FROM batterie 
                  WHERE reference_batterie_voltr = %s
                  
              """
@@ -149,7 +149,7 @@ def determiner_tot_rebus_batterie(fournisseur,num_lot,ref_value_voltr,cursor):
                  format_strings = ','.join(['%s'] * len(num_serie_batteries))
                  cursor.execute(f"""
                      SELECT COUNT(*) 
-                     FROM batteries_recep 
+                     FROM batterie
                      WHERE numero_serie_batterie IN ({format_strings}) 
                      AND exutoire = 'recyclage'
                  """, tuple(num_serie_batteries))
@@ -161,9 +161,9 @@ def determiner_tot_rebus_batterie(fournisseur,num_lot,ref_value_voltr,cursor):
                  
                  return taux_rebus_ref
              else:
-                 cursor.execute("select count(*) from batteries_recep")
+                 cursor.execute("select count(*) from batterie")
                  nombre_tot_batt=cursor.fetchall()[0][0]
-                 cursor.execute("select count(*) from batteries_recep where exutoire is not null")
+                 cursor.execute("select count(*) from batterie where exutoire is not null")
                  nombre_bat_recyclage=cursor.fetchall()[0][0]
                  taux_rebus_glob=float(nombre_bat_recyclage/nombre_tot_batt)
                  return taux_rebus_glob
@@ -179,7 +179,7 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
     SELECT 
         (SUM(CASE WHEN etape_processus = 'demantelee' AND exutoire IS NULL THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS pourcentage_non_traitees
     FROM 
-        cellules
+        cellule
     WHERE 
         num_lot = %s
     '''
@@ -193,21 +193,21 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
         taux_non_traite = float(result[0])
     
     if taux_non_traite < 80 :
-        cursor.execute('SELECT num_lot, COUNT(*) AS total_cellules, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM cellules WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot))
+        cursor.execute('SELECT num_lot, COUNT(*) AS total_cellules, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM cellule WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot))
         rebus_lot=cursor.fetchall()[0]
         df = pd.DataFrame([rebus_lot], columns=['numero_lot', 'total_cells', 'total recyclé','taux_rebus'])
         taux_rebus_lot=df['taux_rebus']
         return float(taux_rebus_lot[0])
     
-    cursor.execute("Select lot from numero_lot where fournisseur=%s",(fournisseur,))
+    cursor.execute("Select num_lot from ref_lot where fournisseur=%s",(fournisseur,))
     nums_lots_cells=cursor.fetchall()
     if nums_lots_cells:
         for num_lot_cell in nums_lots_cells:
             num_lot_act=num_lot_cell[0]
-            cursor.execute('Select count(*) FROM cellules where num_lot=%s',(num_lot_act,))
+            cursor.execute('Select count(*) FROM cellule where num_lot=%s',(num_lot_act,))
             nb_cell_lot=cursor.fetchall()[0][0]
             if nb_cell_lot !=0:
-                cursor.execute('SELECT num_lot, COUNT(*) AS total_cells, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM cellules WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot_act))
+                cursor.execute('SELECT num_lot, COUNT(*) AS total_cells, SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) AS total_recyclees,(SUM(CASE WHEN exutoire = %s THEN 1 ELSE 0 END) / COUNT(*)) AS taux_rebus FROM cellule WHERE num_lot = %s GROUP BY num_lot',('recyclage','recyclage',num_lot_act))
                 rebus_lot=cursor.fetchall()[0]
                 
                 df = pd.DataFrame([rebus_lot], columns=['numero_lot', 'total_cells', 'total recyclé','taux_rebus'])
@@ -221,7 +221,7 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
             
             else :
                 
-                cursor.execute("Select Capacite_nominale_cellule, Courant_de_charge_max from bibliotheque where reference_cellule =%s ",(reference_cell,))
+                cursor.execute("Select capacite_nominale_cellule, courant_de_charge_max from ref_cellule where reference_cellule =%s ",(reference_cell,))
                 capa_nom,c_max_dch=cursor.fetchall()[0]
                 if capa_nom:
                     capa_nom=float(capa_nom)
@@ -232,7 +232,7 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
                     c_max_dch=float(c_max_dch)
                 else :
                     c_max_dch=0
-                cursor.execute("SELECT numero_serie_cellule FROM cellules WHERE reference_cellule IN (SELECT reference_cellule FROM bibliotheque WHERE Capacite_nominale_cellule BETWEEN %s AND %s AND Courant_de_charge_max BETWEEN %s AND %s)", (capa_nom*0.9, capa_nom*1.1, c_max_dch*0.9, c_max_dch*1.1))
+                cursor.execute("SELECT numero_serie_cellule FROM cellule WHERE reference_cellule IN (SELECT reference_cellule FROM ref_cellule WHERE capacite_nominale_cellule BETWEEN %s AND %s AND Courant_de_charge_max BETWEEN %s AND %s)", (capa_nom*0.9, capa_nom*1.1, c_max_dch*0.9, c_max_dch*1.1))
                 numero_series_cells_dom = cursor.fetchall()
                 if numero_series_cells_dom:   
       
@@ -245,7 +245,7 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
                      format_strings = ','.join(['%s'] * len(numero_series_cells_dom))
                      cursor.execute(f"""
                          SELECT COUNT(*) 
-                         FROM cellules 
+                         FROM cellule
                          WHERE numero_serie_cellule IN ({format_strings}) 
                          AND exutoire = 'recyclage'
                      """, tuple(numero_series_cells_dom))
@@ -257,9 +257,9 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
                      
                      return taux_rebus_dom
                 else :
-                    cursor.execute("select count(*) from cellules")
+                    cursor.execute("select count(*) from cellule")
                     nombre_tot_cell=cursor.fetchall()[0][0]
-                    cursor.execute("select count(*) from cellules where exutoire is not null")
+                    cursor.execute("select count(*) from cellule where exutoire is not null")
                     nombre_cell_recyclage=cursor.fetchall()[0][0]
                     taux_rebus_glob=float(nombre_cell_recyclage/nombre_tot_cell)
                     return taux_rebus_glob
@@ -267,11 +267,11 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
         
     else :
         
-        cursor.execute("Select Capacite_nominale_cellule, Courant_de_charge_max from bibliotheque where reference_cellule =%s ",(reference_cell,))
+        cursor.execute("Select Capacite_nominale_cellule, Courant_de_charge_max from ref_cellule where reference_cellule =%s ",(reference_cell,))
         capa_nom,c_max_dch=cursor.fetchall()[0]
         capa_nom=float(capa_nom)
         c_max_dch=float(c_max_dch)
-        cursor.execute("SELECT numero_serie_cellule FROM cellules WHERE reference_cellule IN (SELECT reference_cellule FROM bibliotheque WHERE Capacite_nominale_cellule BETWEEN %s AND %s AND Courant_de_charge_max BETWEEN %s AND %s)", (capa_nom*0.9, capa_nom*1.1, c_max_dch*0.9, c_max_dch*1.1))
+        cursor.execute("SELECT numero_serie_cellule FROM cellule WHERE reference_cellule IN (SELECT reference_cellule FROM ref_cellule WHERE Capacite_nominale_cellule BETWEEN %s AND %s AND Courant_de_charge_max BETWEEN %s AND %s)", (capa_nom*0.9, capa_nom*1.1, c_max_dch*0.9, c_max_dch*1.1))
         numero_series_cells_dom = cursor.fetchall()
         if numero_series_cells_dom:
              
@@ -284,7 +284,7 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
              format_strings = ','.join(['%s'] * len(numero_series_cells_dom))
              cursor.execute(f"""
                  SELECT COUNT(*) 
-                 FROM cellules 
+                 FROM cellule
                  WHERE numero_serie_cellule IN ({format_strings}) 
                  AND exutoire = 'recyclage'
              """, tuple(numero_series_cells_dom))
@@ -296,9 +296,9 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
              
              return taux_rebus_dom
         else :
-            cursor.execute("select count(*) from batteries_recep")
+            cursor.execute("select count(*) from batterie")
             nombre_tot_batt=cursor.fetchall()[0][0]
-            cursor.execute("select count(*) from batteries_recep where exutoire is not null")
+            cursor.execute("select count(*) from batterie where exutoire is not null")
             nombre_bat_recyclage=cursor.fetchall()[0][0]
             taux_rebus_glob=float(nombre_bat_recyclage/nombre_tot_batt)
             return taux_rebus_glob
@@ -306,7 +306,7 @@ def determiner_tot_rebus_cellule(num_lot,fournisseur,reference_cell, cursor):
             
 
 def determiner_soh(num_lot,nb_cells,ref_cell,cursor):
-    cursor.execute('select numero_serie_cellule, SOH_cellule_determine,reference_cellule, num_lot from cellules where etape_processus =%s and num_lot=%s',('Testee',num_lot))
+    cursor.execute('select numero_serie_cellule, soh_cycle,reference_cellule, num_lot from cellule where etape_processus =%s and num_lot=%s',('Testee',num_lot))
     cell_test=cursor.fetchall()   
     if cell_test :
         df = pd.DataFrame(cell_test, columns=['numero_serie_cellule', 'SOH_cellule_determine', 'reference_cellule','num_lot'])
@@ -319,11 +319,11 @@ def determiner_soh(num_lot,nb_cells,ref_cell,cursor):
         new_soh = np.random.normal(loc=mean, scale=std_dev, size=nb_cells)
         soh_m= statistics.mean(new_soh)
         return new_soh,soh_m
-    cursor.execute('Select lot from numero_lot where fournisseur in (select fournisseur from numero_lot where lot=%s)',(num_lot,))
+    cursor.execute('Select num_lot from ref_lot where fournisseur in (select fournisseur from ref_lot where num_lot=%s)',(num_lot,))
     lots_fournisseur = cursor.fetchall()[0]
     if lots_fournisseur:
         for lot in lots_fournisseur:
-            cursor.execute('select numero_serie_cellule, SOH_cellule_determine,reference_cellule, num_lot from cellules where etape_processus =%s and num_lot=%s',('Testee',lot))
+            cursor.execute('select numero_serie_cellule, soh_cycle,reference_cellule, num_lot from cellule where etape_processus =%s and num_lot=%s',('Testee',lot))
             cell_test=cursor.fetchall()   
             if cell_test :
                 df = pd.DataFrame(cell_test, columns=['numero_serie_cellule', 'SOH_cellule_determine', 'reference_cellule','num_lot'])
@@ -336,10 +336,10 @@ def determiner_soh(num_lot,nb_cells,ref_cell,cursor):
                 new_soh = np.random.normal(loc=mean, scale=std_dev, size=nb_cells)
                 soh_m= statistics.mean(new_soh)
                 return new_soh,soh_m
-    cursor.execute('Select fournisseur from numero_lot where lot=%s',(num_lot,))
+    cursor.execute('Select fournisseur from ref_lot where num_lot=%s',(num_lot,))
     fournisseur=cursor.fetchall()[0][0] 
     if fournisseur:
-        cursor.execute('select numero_serie_cellule, SOH_cellule_determine,reference_cellule, num_lot from cellules where etape_processus =%s and num_lot in ( select lot from numero_lot where fournisseur =%s)',('Testee',fournisseur))
+        cursor.execute('select numero_serie_cellule, soh_cycle,reference_cellule, num_lot from cellule where etape_processus =%s and num_lot in ( select num_lot from ref_lot where fournisseur =%s)',('Testee',fournisseur))
         cell_test=cursor.fetchall()   
         if cell_test :
             df = pd.DataFrame(cell_test, columns=['numero_serie_cellule', 'SOH_cellule_determine', 'reference_cellule','num_lot'])
@@ -353,7 +353,7 @@ def determiner_soh(num_lot,nb_cells,ref_cell,cursor):
             soh_m= statistics.mean(new_soh)
             return new_soh,soh_m
         else :
-            cursor.execute("Select Capacite_nominale_cellule, Courant_de_charge_max from bibliotheque where reference_cellule =%s ",(ref_cell,))
+            cursor.execute("Select Capacite_nominale_cellule, Courant_de_charge_max from ref_cellule where reference_cellule =%s ",(ref_cell,))
             capa_nom,c_max_dch=cursor.fetchall()[0]
             if capa_nom:
                 capa_nom=float(capa_nom)
@@ -365,12 +365,12 @@ def determiner_soh(num_lot,nb_cells,ref_cell,cursor):
             else :
                 c_max_dch=0
             cursor.execute('''
-    SELECT numero_serie_cellule, SOH_cellule_determine, reference_cellule,num_lot
-    FROM cellules 
+    SELECT numero_serie_cellule, SOH_cycle, reference_cellule,num_lot
+    FROM cellule
     WHERE etape_processus = %s 
     AND reference_cellule IN (
         SELECT reference_cellule 
-        FROM bibliotheque 
+        FROM ref_cellule
         WHERE capacite_nominale_cellule BETWEEN %s AND %s 
         AND courant_de_charge_max BETWEEN %s AND %s
     )
@@ -392,7 +392,7 @@ def determiner_soh(num_lot,nb_cells,ref_cell,cursor):
                 soh_m= statistics.mean(new_soh)
                 return new_soh,soh_m
             else :
-                cursor.execute('select numero_serie_cellule, SOH_cellule_determine,reference_cellule, num_lot from cellules where etape_processus =%s',('Testee',))
+                cursor.execute('select numero_serie_cellule, SOH_cycle,reference_cellule, num_lot from cellule where etape_processus =%s',('Testee',))
                 cell_test_glob=cursor.fetchall()  
                 df = pd.DataFrame(cell_test_glob, columns=['numero_serie_cellule', 'SOH_cellule_determine', 'reference_cellule','num_lot'])
                 df = df.dropna(subset=['SOH_cellule_determine'])
@@ -411,7 +411,7 @@ def determiner_soh(num_lot,nb_cells,ref_cell,cursor):
 
 def main():
     conn=connecter_bdd("34.77.226.40", "Vanvan", "VoltR99!", "cellules_batteries_cloud")
-    #conn=connecter_bdd("127.0.0.1", "root", "VoltR99!", "cellules_batteries_cloud")
+    #conn=connecter_bdd("127.0.0.1", "root", "VoltR99!", "bdd_clean")
     batteries_par_num_lot=extraire_batteries_a_traiter(conn)
     cursor=conn.cursor()
     for lot in batteries_par_num_lot:
@@ -424,21 +424,21 @@ def main():
         list_batt=lot['Numero_serie_batterie'].tolist()
         if ref_cell=='INCONNU' or ref_cell == 'cellule_non_verifiee':
             for batt_previ in list_batt:
-                cursor.execute("UPDATE batteries_recep SET previsionnel_calcule =%s where numero_serie_batterie=%s",("Ok",batt_previ))
+                cursor.execute("UPDATE batterie SET previsionnel_calcule =%s where numero_serie_batterie=%s",("Ok",batt_previ))
             conn.commit()
             continue
         rebus_batt= determiner_tot_rebus_batterie(fournisseur,numero_lot,ref_batt,cursor)
         nb_batt_previ=round(nb_batt*(1-rebus_batt))
-        cursor.execute("SELECT Nombre_cellule,utilisation_premiere_vie,type_cellules FROM bibliotheque_batteries WHERE Reference_voltr=%s",(ref_batt,))
+        cursor.execute("SELECT Nombre_cellule,utilisation_premiere_vie,type_cellule FROM ref_batterie WHERE Reference_batterie_voltr=%s",(ref_batt,))
         data_ref_batt=cursor.fetchall()[0]
         nb_cells,usage,typec=data_ref_batt
         nb_cells=int(nb_cells)
-        cursor.execute("SELECT Date FROM numero_lot WHERE lot=%s",(numero_lot,))
+        cursor.execute("SELECT Date FROM ref_lot WHERE num_lot=%s",(numero_lot,))
         date_reception=cursor.fetchall()[0][0]
         rebus_cells=determiner_tot_rebus_cellule(numero_lot, fournisseur, ref_cell, cursor)
         nb_cells_previ=round(nb_cells*(1-rebus_cells))
         soh_ventilation,soh_m=determiner_soh(numero_lot, nb_cells_previ,ref_cell,cursor)
-        cursor.execute("Select Capacite_nominale_cellule from bibliotheque where reference_cellule= %s",(ref_cell,))
+        cursor.execute("Select Capacite_nominale_cellule from ref_cellule where reference_cellule= %s",(ref_cell,))
         capa_ref_cell=cursor.fetchall()[0][0]
         id_boucle=nb_batt_previ
         print(numero_lot)
@@ -449,7 +449,7 @@ def main():
         while id_boucle != 0:
             for k in range(nb_cells_previ):
                 
-                 query = "SELECT numero_serie_cellule FROM cellules_previsionelles WHERE numero_serie_cellule LIKE %s"
+                 query = "SELECT numero_serie_cellule FROM cellule_previsionnelle WHERE numero_serie_cellule LIKE %s"
                  param = ('CP' + '%', ) #cherche le type de batterie demandé 
                  cursor.execute(query, param)
                  existing_series = [serie[0] for serie in cursor.fetchall()] # Liste de toutes les batterie de ce type
@@ -473,15 +473,16 @@ def main():
                  
                  soh_cell=float(soh_ventilation[k])
                  capa_cell=capa_ref_cell*soh_cell/100
+                 print(new_serie_cell)
 
-                 insert_query ="INSERT INTO cellules_previsionelles (Numero_serie_cellule, Num_lot,utilisation_premiere_vie, Date_de_reception, Type_cellule, Reference_cellule,SOH_cellule_determine,reference_batterie) VALUES(%s, %s, %s, %s, %s, %s, %s,%s)"
-                 insert_params = (new_serie_cell,numero_lot,usage, date_reception, typec,ref_cell,soh_cell,ref_batt)
+                 insert_query ="INSERT INTO cellule_previsionnelle (Numero_serie_cellule, Num_lot,utilisation_premiere_vie, Reference_cellule,SOH_estimatif,reference_batterie) VALUES(%s, %s, %s, %s, %s, %s)"
+                 insert_params = (new_serie_cell,numero_lot,usage, ref_cell,soh_cell,ref_batt)
                  cursor.execute(insert_query, insert_params)
                  
             id_boucle -= 1
         
         for batt_previ in list_batt:
-            cursor.execute("UPDATE batteries_recep SET previsionnel_calcule =%s where numero_serie_batterie=%s",("Ok",batt_previ))
+            cursor.execute("UPDATE batterie SET previsionnel_calcule =%s where numero_serie_batterie=%s",("Ok",batt_previ))
         conn.commit()
     
     cursor.close()
