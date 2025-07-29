@@ -5,9 +5,9 @@ Created on Fri May 23 12:03:52 2025
 @author: User
 """
 import os
-import mysql.connector
+#import mysql.connector
 import pandas as pd
-
+"""
 user='Vanvan'
 password='VoltR99!'
 
@@ -19,8 +19,8 @@ conn = mysql.connector.connect(
     database="cellules_batteries_cloud",
     auth_plugin='mysql_native_password'
 ) 
-
-dossier=r"C:\Users\User\Desktop\test guy\cellules"
+"""
+dossier=r"C:\Users\User\Desktop\cellules slatr17072025"
 
 colonnes = ['numero_serie', 'capa', 'resi']
 df = pd.DataFrame(columns=colonnes)
@@ -59,13 +59,13 @@ for fichier in os.listdir(dossier):#Traite chaque fichier dans le dossier
         etape = data['Step Type'].tolist() #Type d'etape 
         
         # Dernière ligne où 'Step Index' == 6
-        df_8_last = data[data["Step Index"] == 8].tail(1)
+        df_7_last = data[data["Step Index"] == 7].tail(1)
         
         # Toutes les lignes où 'Step Index' == 7
-        df_9_first = data[data["Step Index"] == 9].head(1)
+        df_8_last = data[data["Step Index"] == 8].tail(1)
         
         # Combiner
-        df_tot = pd.concat([df_8_last,df_9_first])
+        df_tot = pd.concat([df_7_last,df_8_last])
         
         # Pour conserver l’ordre d’origine (si nécessaire) :
         df_tot = df_tot.sort_index()
@@ -92,4 +92,4 @@ for fichier in os.listdir(dossier):#Traite chaque fichier dans le dossier
         nouvelle_ligne = {'numero_serie': numero_serie_cellule, 'capa': capacite_decharge, 'resi':  resistance_interne}
         df = pd.concat([df, pd.DataFrame([nouvelle_ligne])], ignore_index=True)
         
-df.to_excel("test guy.xlsx", sheet_name="Sheet1")
+df.to_excel("results_C3.xlsx", sheet_name="Sheet1")

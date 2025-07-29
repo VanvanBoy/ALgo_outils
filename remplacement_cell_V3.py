@@ -11,7 +11,7 @@ from mysql.connector import Error
 import numpy as np
 from tkinter import messagebox
 from datetime import datetime
-"""
+
 def extract_long_strings_from_excel(file_path, min_length=12):
     # Charger toutes les feuilles du fichier Excel
     xls = pd.ExcelFile(file_path)
@@ -31,7 +31,7 @@ def extract_long_strings_from_excel(file_path, min_length=12):
     
     # Supprimer les doublons et retourner les résultats
     return list(set(long_strings))
-"""
+
 def selection_fut(type_produit,numero_serie,cursor):
         
         cursor.execute("SELECT bib.poids FROM ref_cellule AS bib JOIN cellule AS cell ON bib.reference_cellule = cell.reference_cellule WHERE cell.numero_serie_cellule = %s",(numero_serie,))
@@ -82,7 +82,7 @@ def trouver_remplacement(cellule, df_disponibles,capa_origine,resi_origine):
     df_filtre = df_disponibles
     df_filtre['ecart_capacite'] = np.abs(df_filtre['capacite_cyclee'] - capa_origine)
     df_filtre['ecart_resistance'] = np.abs(df_filtre['resistance_interne_cyclee'] - resi_origine)
-    df_filtre['ecart_total'] = 50*df_filtre['ecart_capacite'] + df_filtre['ecart_resistance']
+    df_filtre['ecart_total'] = 100*df_filtre['ecart_capacite'] + df_filtre['ecart_resistance']
     meilleure_cellule = df_filtre.loc[df_filtre['ecart_total'].idxmin()]
     return meilleure_cellule
 
@@ -153,11 +153,10 @@ def main(fichier_excel, host, database, user, password, ref_cell,type_carac):
     try:
         query = "SELECT numero_serie_cellule, reference_cellule, capacite_cyclee, resistance_interne_cyclee, disponibilite FROM cellule WHERE disponibilite = 'DISPO' and reference_cellule = %s and type_carac= %s"
         df_disponibles = pd.read_sql(query, conn, params=[ref_cell,type_carac])
-        """
-        file_path="C:/Users/User/Desktop/Plateaux 14042025/DEF.xlsx"
+        
+        file_path=r"C:\Users\User\Downloads\plateau_22072025.xlsx"
         list_plat=extract_long_strings_from_excel(file_path)
         df_disponibles = df_disponibles[df_disponibles['numero_serie_cellule'].isin(list_plat)]
-        """
 
         remplacements = []
 
@@ -168,13 +167,14 @@ def main(fichier_excel, host, database, user, password, ref_cell,type_carac):
             numero_serie = cellule['N° cellule']
             produit = cellule['N° batterie']
             tension = cellule['Tension'] if not pd.isna(cellule['Tension']) else None
-            produit = 'VB000'+str(produit)
+            produit = str(produit)
             cursor=conn.cursor()
             cursor.execute("select capacite_cyclee,resistance_interne_cyclee from cellule where numero_serie_cellule=%s",(numero_serie,))
             data=cursor.fetchall()
             capa_origine=data[0][0]
             resi_origine=data[0][1]
             cursor.close()       
+            print(numero_serie)
             
             meilleure_cellule = trouver_remplacement(cellule, df_disponibles,capa_origine,resi_origine)
             remplacements.append({
@@ -188,26 +188,33 @@ def main(fichier_excel, host, database, user, password, ref_cell,type_carac):
             })
 
             if cause == "Non trouvée":
-                
-                # Update the database for the replacement
-                maj_bdd_remplaçante(conn, meilleure_cellule['numero_serie_cellule'], produit)
-                # Update the original cell as "introuvable"
-                maj_bdd_origine(conn, numero_serie,"introuvable")
-                inserer_remplacement(conn, numero_serie, meilleure_cellule['numero_serie_cellule'], produit, "introuvable")
+                    # Update the database for the replacement
+                    maj_bdd_remplaçante(conn, meilleure_cellule['numero_serie_cellule'], produit)
+                    # Update the original cell as "introuvable"
+                    maj_bdd_origine(conn, numero_serie,"introuvable")
+                    inserer_remplacement(conn, numero_serie, meilleure_cellule['numero_serie_cellule'], produit, "introuvable")
 
-            
             elif cause == "Tension":
                     # Handle tension-related issues
                     maj_bdd_origine(conn, numero_serie,"pb tension, mise de coté")
                     maj_bdd_remplaçante(conn, meilleure_cellule['numero_serie_cellule'], produit)
                     inserer_remplacement(conn, numero_serie, meilleure_cellule['numero_serie_cellule'], produit, "tension", tension)
                     inserer_recyclage(conn, numero_serie) 
+                    
             elif cause=='Déformation':
                     # Handle other non-conformity cases
                     maj_bdd_origine(conn, numero_serie,"remplacement non conformité")
                     maj_bdd_remplaçante(conn, meilleure_cellule['numero_serie_cellule'], produit)
                     inserer_remplacement(conn, numero_serie, meilleure_cellule['numero_serie_cellule'], produit, "déformation")
                     inserer_recyclage(conn, numero_serie)
+                    
+            elif cause == 'Corrosion':
+                    maj_bdd_origine(conn, numero_serie,"remplacement non conformité")
+                    maj_bdd_remplaçante(conn, meilleure_cellule['numero_serie_cellule'], produit)
+                    inserer_remplacement(conn, numero_serie, meilleure_cellule['numero_serie_cellule'], produit, "corrosion")
+                    inserer_recyclage(conn, numero_serie)
+                    
+                    
 
             # Remove the selected replacement from available cells
             df_disponibles = df_disponibles[df_disponibles['numero_serie_cellule'] != meilleure_cellule['numero_serie_cellule']]
@@ -216,7 +223,7 @@ def main(fichier_excel, host, database, user, password, ref_cell,type_carac):
         df_remplacements = pd.DataFrame(remplacements)
 
         # Save the modified Excel file with replacement information
-        chemin_rapport = "C:/Users/User/Desktop/Remplacements NA04062025.xlsx"
+        chemin_rapport = "C:/Users/User/Desktop/Remplacements NA22072025.xlsx"
         df_remplacements.to_excel(chemin_rapport, index=False)
 
         print(f"Fichier Excel modifié sauvegardé sous {chemin_rapport}")
@@ -229,7 +236,7 @@ def main(fichier_excel, host, database, user, password, ref_cell,type_carac):
 
 # Use the main function with the uploaded file
 #fichier_excel = "G:/Drive partagés/VoltR/4_Production/8_Picking/remplacement/Remplacement en cours/Remplacement NA 14042025.xlsx"
-fichier_excel = "C:/Users/User/Desktop/Remplacement NA04062025.xlsx"
+fichier_excel = r"C:\Users\User\Downloads\Remplacement NA 21072025 (1).xlsx"
 """
 host = "localhost"
 database = "cellules_batteries_cloud"

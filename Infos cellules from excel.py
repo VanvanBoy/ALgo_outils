@@ -37,10 +37,10 @@ def extract_long_strings_from_excel(file_path, min_length=12):
 """ Cas ou le fichier est sous forme de colonnes"""
 # Suppose que la première colonne contient les numéros de série
 # On retire les doublons éventuels et les valeurs nulles
-## list_num_serie = df_excel.iloc[:, 0].dropna().unique().tolist()
+#list_num_serie = df_excel.iloc[:, 0].dropna().unique().tolist()
 
 """ cas ou le fichier est sous forme de tableaux"""
-file_path=r"C:\Users\User\Desktop\NA_23052025\Extraction 35E au 230525.xlsx"
+file_path=r"C:\Users\User\Downloads\plateau_23072025_29to40.xlsx"
 list_num_serie = extract_long_strings_from_excel(file_path, min_length=12)
 
 # 2. Connexion à la base de données MySQL
@@ -58,22 +58,24 @@ curseur = connexion.cursor()
 data = []
 for num_serie in list_num_serie:
     requete = """
-        SELECT date_test,
+        SELECT date_cyclage,
                etape_processus,
-               capacite_decharge_cellule_mesuree,
+               capacite_cyclee,
                exutoire,
                reference_cellule,
                type_carac,
                disponibilite,
-               affectation_produit
-        FROM cellules
+               affectation_produit,
+               soh_cycle,
+               resistance_interne_cyclee
+        FROM cellule
         WHERE numero_serie_cellule = %s
     """
     curseur.execute(requete, (num_serie,))
     resultats = curseur.fetchall()
 
     # Pour chaque enregistrement retourné, on l'ajoute dans la liste 'data'
-    for (date_test, etape_processus, capacite_decharge, exutoire, reference_cellule,type_carac,disponibilite,affectation_produit) in resultats:
+    for (date_test, etape_processus, capacite_decharge, exutoire, reference_cellule,type_carac,disponibilite,affectation_produit,soh,resistance) in resultats:
         data.append([
             num_serie,
             date_test,
@@ -83,7 +85,9 @@ for num_serie in list_num_serie:
             reference_cellule,
             type_carac,
             disponibilite,
-            affectation_produit
+            affectation_produit,
+            soh,
+            resistance
             
         ])
 
@@ -103,7 +107,9 @@ df_final = pd.DataFrame(
         "reference_cellule",
         "type_carac",
         "disponibilite",
-        "affectation_produit"
+        "affectation_produit",
+        "soh",
+        "resistance"
     ]
 )
 
