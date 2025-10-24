@@ -40,7 +40,7 @@ def extract_long_strings_from_excel(file_path, min_length=12):
 #list_num_serie = df_excel.iloc[:, 0].dropna().unique().tolist()
 
 """ cas ou le fichier est sous forme de tableaux"""
-file_path=r"C:\Users\User\Downloads\Remplacement OEP a lancer avant Association sur les nouveaux plateaux1.xlsx"
+file_path=r"C:\Users\User\Downloads\Plateau 17to36 18092025.xlsx"
 list_num_serie = extract_long_strings_from_excel(file_path, min_length=12)
 
 # 2. Connexion à la base de données MySQL
@@ -111,91 +111,74 @@ df_final = pd.DataFrame(
 
 print(df_final)
 
-"""
-# Après avoir construit df_final
-present = set(df_final['numero_serie_cellule'].unique())
-missing = [s for s in list_num_serie if s not in present]
-
-df_missing = pd.DataFrame({
-    'numero_serie_cellule': missing,
-    'raison': 'Aucun enregistrement dans table cellule'
-})
-
-print(f"Nb attendus: {len(list_num_serie)} | Nb trouvés: {df_final['numero_serie_cellule'].nunique()} | Manquants: {len(df_missing)}")
-print(df_missing.head())
-"""
-
 # Fermeture de la connexion
 curseur.close()
 connexion.close()
 
 """
 
-# Après avoir construit df_final
-present = set(df_final['numero_serie_cellule'].unique())
-missing = [s for s in list_num_serie if s not in present]
+lower = "VB0010584"
+upper = "VB0010819"
 
-df_missing = pd.DataFrame({
-    'numero_serie_cellule': missing,
-    'raison': 'Aucun enregistrement dans table cellule'
-})
+ap = df_final["affectation_produit"].astype(str)
 
-print(f"Nb attendus: {len(list_num_serie)} | Nb trouvés: {df_final['numero_serie_cellule'].nunique()} | Manquants: {len(df_missing)}")
-print(df_missing.head())
+mask_in_range = (
+    ap.str.match(r"^VB\d{7}$", na=False)
+    & ap.ge(lower)
+    & ap.le(upper)
+)
+
+df_filtre = df_final.loc[~mask_in_range].copy()
+
+df_mh1=df_filtre[df_filtre['reference_cellule']=='INR18650MH1']
+
+lst = df_mh1["numero_serie_cellule"].tolist() 
 
 
-df_affected=df_final[df_final['affectation_produit'].notna()] #Obtenir uniquement les num serie des cellules avec une affectation
-
-df_recyclage=df_final[df_final['exutoire'].notna()] 
-
-lst = df_affected["numero_serie_cellule"].tolist() 
-
-lst_r = df_recyclage["numero_serie_cellule"].tolist() 
-
-lst_m = df_missing["numero_serie_cellule"].tolist() 
-
-df_emplacement = pd.DataFrame(columns=["num_serie", "emplacement","num_produit"])
-df_emplacement_r = pd.DataFrame(columns=["num_serie", "emplacement","num_produit"])
-df_emplacement_m = pd.DataFrame(columns=["num_serie", "emplacement","num_produit"])
+df_emplacement = pd.DataFrame(columns=["num_serie", "emplacement"])
 
 query_cell="select code_emplacement from emplacement where numero_serie= %s"
-query_affectation="select affectation_produit from cellule where numero_serie_cellule = %s"
 
 for cellule in lst:
     curseur.execute(query_cell,(cellule,))
     row = curseur.fetchone()                 
     code = row[0] if row else None           
+    df_emplacement.loc[len(df_emplacement)] = [cellule, code]
     
-    curseur.execute(query_affectation,(cellule,))
-    row=curseur.fetchone() 
-    prod= row[0] if row else None 
-    df_emplacement.loc[len(df_emplacement)] = [cellule, code,prod]
+df_emplacement.to_excel(r"C:\Users\User\Downloads\df_emplacement.xlsx", index=False)    
 
-for cellule in lst_r:
+# Fermeture de la connexion
+curseur.close()
+connexion.close()
+"""
+
+"""
+df_affect = df_final[df_final['affectation_produit'].notna()]
+
+lower = "VB0010351"
+upper = "VB0010440"
+
+ap = df_affect["affectation_produit"].astype(str)
+
+mask_in_range = (
+    ap.str.match(r"^VB\d{7}$", na=False)
+    & ap.ge(lower)
+    & ap.le(upper)
+)
+
+df_filtre = df_affect.loc[~mask_in_range].copy()
+
+lst = df_filtre["numero_serie_cellule"].tolist() 
+
+df_filtre.to_excel(r"C:\Users\User\Downloads\MJ1_affect.xlsx", index=False)  
+
+query_cell="update cellule set affectation_produit = null, disponibilite='dispo' where numero_serie_cellule = %s"
+
+for cellule in lst:
+    print(cellule)
     curseur.execute(query_cell,(cellule,))
-    row = curseur.fetchone()                 
-    code = row[0] if row else None           
     
-    curseur.execute(query_affectation,(cellule,))
-    row=curseur.fetchone() 
-    prod= row[0] if row else None 
-    df_emplacement_r.loc[len(df_emplacement_r)] = [cellule, code,prod]
+connexion.commit()
 
-for cellule in lst_m:
-    curseur.execute(query_cell,(cellule,))
-    row = curseur.fetchone()                 
-    code = row[0] if row else None           
-    
-    curseur.execute(query_affectation,(cellule,))
-    row=curseur.fetchone() 
-    prod= row[0] if row else None 
-    df_emplacement_m.loc[len(df_emplacement_m)] = [cellule, code,prod]
-    
-
-df_emplacement.to_excel(r"C:\Users\User\Downloads\df_35E_P17-25_affected.xlsx", index=False) #Enregistrer la df avec les emplacements sous format excel 
-
-df_emplacement_r.to_excel(r"C:\Users\User\Downloads\df_35E_P17-25_recyclage.xlsx", index=False) #Enregistrer la df avec les emplacements sous format excel 
-
-df_emplacement_m.to_excel(r"C:\Users\User\Downloads\df_35E_P17-25_missing.xlsx", index=False) #Enregistrer la df avec les emplacements sous format excel 
-
+print(test)
 """
