@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Sep 16 19:19:59 2025
+Created on Tue Dec 16 14:54:45 2025
 
 @author: User
 """
@@ -22,9 +22,9 @@ DB_CONFIG = {
 
 # ========= Paramètres plateau =========
 # Plateaux à (re)créer : 1–16, 37–47, 59–99 (plateau 17 conservé tel quel)
-PLATEAU_RANGES = [(100, 100)]
-N_LIGNES = 16     # A..P
-N_COLONNES = 16   # 1..16
+PLATEAU_RANGES = [(101, 114)]
+N_LIGNES = 9   # A..P
+N_COLONNES = 14   # 1..16
 
 # Si True : on efface d'abord tout ce qui existe pour ces plateaux, avant de réinsérer proprement
 DELETE_EXISTING_FIRST = True
