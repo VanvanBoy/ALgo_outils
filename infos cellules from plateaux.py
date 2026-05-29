@@ -21,7 +21,7 @@ connexion = mysql.connector.connect(
 curseur = connexion.cursor()
 
 query_emp="select numero_serie from emplacement where plateau_id between %s and %s"
-params_emp=(101,114) #intervalle de plateau 
+params_emp=(1,19) #intervalle de plateau 
 curseur.execute(query_emp,params_emp)
 rows=curseur.fetchall()
 list_num_serie = [r[0] for r in rows] 
@@ -40,6 +40,7 @@ for num_serie in list_num_serie:
                affectation_produit,
                soh_cycle,
                resistance_interne_cyclee,
+               c.tension_plateau,
                code_emplacement,
                commentaire
         FROM cellule as c
@@ -52,7 +53,7 @@ for num_serie in list_num_serie:
     resultats = curseur.fetchall()
 
     # Pour chaque enregistrement retourné, on l'ajoute dans la liste 'data'
-    for (date_test, etape_processus, capacite_decharge, exutoire, reference_cellule,type_carac,disponibilite,affectation_produit,soh,resistance,emplacement, commentaire) in resultats:
+    for (date_test, etape_processus, capacite_decharge, exutoire, reference_cellule,type_carac,disponibilite,affectation_produit,soh,resistance,tension_plateau,emplacement, commentaire) in resultats:
         data.append([
             num_serie,
             date_test,
@@ -65,6 +66,7 @@ for num_serie in list_num_serie:
             affectation_produit,
             soh,
             resistance,
+            tension_plateau,
             emplacement,
             commentaire
         ])
@@ -84,6 +86,7 @@ df_final = pd.DataFrame(
         "affectation_produit",
         "soh",
         "resistance",
+        "tension_plateau",
         "emplacement",
         "commentaire"
     ]

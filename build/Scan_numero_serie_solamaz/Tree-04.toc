@@ -1,0 +1,5 @@
+('C:\\Users\\User\\Desktop\\GitHub\\Algo_outils\\build\\Scan_numero_serie_solamaz\\tkcalendar-1.6.1-py3.11.egg',
+ None,
+ {'*.py', '*.cp311-win_amd64.pyd', '*.pyd', '*.pyc', 'EGG-INFO', '*.pyw'},
+ 'DATA',
+ [])
